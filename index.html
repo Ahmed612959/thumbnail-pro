@@ -58,6 +58,21 @@ details[open]>summary::after{content:"\2212"}
 .hint{font-size:12px;color:var(--mute);line-height:1.8;margin:0}
 label.hint{display:flex;gap:6px;align-items:center}
 @media(max-width:1050px){main{grid-template-columns:1fr;padding:14px}#vids{max-height:240px}#panel{position:static;max-height:none}}
+.addimg{cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:8px 16px;background:var(--card);font-weight:700;font-size:14px}
+.addimg:hover{background:var(--soft)}
+.lr{display:flex;gap:4px;align-items:center;padding:4px 6px;border:1.5px solid transparent;border-radius:9px;margin-bottom:4px;background:var(--bg)}
+.lr.on{border-color:var(--acc);background:var(--soft)}
+.lr span{flex:1;font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.lr button{padding:2px 7px;font-size:12px;border-radius:7px}
+.pvw{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;padding:14px;border-radius:10px;margin-top:8px;background:#fff;border:1px solid var(--line)}
+.pvw.dk{background:#0f0f0f;color:#fff;border-color:#0f0f0f}
+.pvc{display:grid;gap:4px}
+.pvc canvas{aspect-ratio:auto;height:auto;cursor:default;border:0;box-shadow:none;border-radius:10px}
+.pvc b{font-size:13px;line-height:1.4;font-weight:700}
+.pvc small{font-size:11px;color:var(--mute)}
+.rl{padding:6px 10px;border-radius:8px;margin-bottom:6px;font-size:13px}
+.rl.ok{background:#e8f5ee;color:#166534}
+.rl.w{background:#fdf1e2;color:#8a4b08}
 </style>
 </head>
 <body>
@@ -86,15 +101,30 @@ label.hint{display:flex;gap:6px;align-items:center}
           <option value="s">مربع 1:1 (1080×1080)</option>
         </select>
       </div>
+      <button id="undo" onclick="undo()" disabled>تراجع</button>
+      <button id="redo" onclick="redo()" disabled>إعادة</button>
+      <button onclick="newProj()">مشروع جديد</button>
       <span id="fnote" class="hint"></span>
     </div>
     <canvas id="cv" width="1280" height="720"></canvas>
     <div class="row">
       <button class="pri" id="up" disabled>رفع على اليوتيوب</button>
       <button class="sec" id="dl">تحميل الصورة</button>
+      <select id="xf" style="padding:8px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font-family:inherit"><option value="yt">JPG جاهز ليوتيوب (تحت 2MB)</option><option value="png">PNG</option><option value="webp">WebP</option></select>
+      <button onclick="togglePv()">معاينة يوتيوب</button>
+      <button onclick="analyze()">فحص الجودة</button>
       <span id="vt" class="hint">لم يتم اختيار فيديو بعد</span>
     </div>
     <p class="hint">اسحب أي نص على الصورة لتحريكه. المقاس يتغير حسب الفيديو أو اختيارك، والحجم يُضغط تلقائياً تحت 2MB كما يشترط يوتيوب.</p>
+    <div class="box" id="pvbox" style="display:none"><h2>معاينة على يوتيوب</h2>
+      <label class="hint"><input type="checkbox" id="pvd"> الوضع الداكن</label>
+      <div id="pvwrap" class="pvw">
+        <div class="pvc"><canvas id="p1"></canvas><b id="pt1"></b><small>اسم قناتك · 12 ألف مشاهدة</small></div>
+        <div class="pvc"><canvas id="p2"></canvas><b id="pt2"></b><small>اسم قناتك</small></div>
+        <div class="pvc"><canvas id="p3"></canvas><b id="pt3"></b></div>
+      </div>
+    </div>
+    <div class="box" id="rep" style="display:none"><h2>تقرير الجودة</h2><div id="repl"></div></div>
     <div class="box" id="rbox">
       <h2>أو ارفع صورة جاهزة من هاتفك</h2>
       <div class="f"><input type="file" id="rf" accept="image/jpeg,image/png,image/webp"></div>
@@ -138,12 +168,24 @@ label.hint{display:flex;gap:6px;align-items:center}
     <div class="f">شعار القناة<input type="file" id="lgf" accept="image/*"></div>
     <div class="f">حجم الشعار<input type="range" id="lgs" min="60" max="300" value="140"></div>
 
-    </details><details open><summary>النصوص</summary>
+    </details><details open><summary>الطبقات</summary>
     <div id="layers"></div>
     <div class="row" style="margin-bottom:10px">
       <button onclick="addL()">+ نص</button>
+      <label class="addimg">+ صورة<input type="file" id="af" accept="image/*" multiple hidden></label>
       <button class="danger" onclick="delL()">حذف</button>
     </div>
+    <div id="ictl" style="display:none">
+      <div class="f">الحجم<input type="range" id="is" min="5" max="400" value="100"></div>
+      <div class="f">الدوران<input type="range" id="ir" min="-180" max="180" value="0"></div>
+      <div class="f">الشفافية<input type="range" id="io" min="10" max="100" value="100"></div>
+      <div class="two"><div class="f">سطوع<input type="range" id="eb" min="50" max="150" value="100"></div><div class="f">تباين<input type="range" id="ec" min="50" max="170" value="100"></div></div>
+      <div class="two"><div class="f">تشبّع<input type="range" id="es" min="0" max="200" value="100"></div><div class="f">ظل<input type="range" id="ed" min="0" max="50" value="0"></div></div>
+      <div class="two"><div class="f">توهج<input type="range" id="eg" min="0" max="60" value="0"></div><div class="f">لون التوهج<input type="color" id="egc" value="#00e5ff"></div></div>
+      <div class="two"><div class="f">حدود<input type="range" id="eo" min="0" max="20" value="0"></div><div class="f">لون الحدود<input type="color" id="eoc" value="#ffffff"></div></div>
+      <div class="row" style="margin-bottom:10px"><button onclick="flipL()">قلب أفقي</button><button onclick="resetFx()">إعادة الضبط</button></div>
+    </div>
+    <div id="tctl">
     <div class="f">النص<textarea id="t"></textarea></div>
     <div class="two">
       <div class="f">الخط<select id="fo"><option>Cairo</option><option>Tajawal</option><option>Almarai</option><option>Lemonada</option><option>Reem Kufi</option></select></div>
@@ -156,6 +198,21 @@ label.hint{display:flex;gap:6px;align-items:center}
     </div>
     <div class="f">سمك الإطار<input type="range" id="sw" min="0" max="30"></div>
     <label class="hint"><input type="checkbox" id="sh"> ظل خلف النص</label>
+    </div>
+    </details>
+    <details><summary>ألوان التصميم</summary>
+      <div class="f">دفء اللون (بارد ← دافئ)<input type="range" id="gw" min="-100" max="100" value="0"></div>
+      <div class="f">تعتيم الأطراف<input type="range" id="gv" min="0" max="100" value="0"></div>
+      <p class="hint">لتأثيرات الصور (سطوع، توهج، حدود، ظل) اختر طبقة صورة من قسم الطبقات.</p>
+    </details>
+    <details><summary>هوية القناة</summary>
+      <div class="row"><button onclick="brandSave()">حفظ الهوية</button><button class="pri" onclick="brandApply()">تطبيق الهوية</button></div>
+      <p class="hint">تحفظ ألوان الخلفية والشعار وخط النص ولونه وإطاره من التصميم الحالي.</p>
+    </details>
+    <details><summary>دفعة صور (سلسلة)</summary>
+      <div class="f">عنوان لكل سطر (استخدم | لسطر جديد داخل العنوان)<textarea id="bt" style="min-height:110px"></textarea></div>
+      <button class="pri" id="bb" onclick="batchRun()">إنشاء وتنزيل ZIP</button>
+      <p class="hint">يستخدم التصميم الحالي ويغيّر النص المحدد (أو أول نص) لكل عنوان.</p>
     </details>
   </section>
 </main>
@@ -177,7 +234,7 @@ const $ = id => document.getElementById(id);
 let S = {c1:'#0b3d91', c2:'#00b4d8', br:100, sa:110, ov:45, od:'b', zoom:100, bx:0, by:0, lgs:140};
 let bgImg = null, logoImg = null, layers = [], sel = 0, token = null, video = null, nextPage = null, uploadsId = null, uid = 1;
 
-const mk = o => Object.assign({id:uid++, t:'نص جديد', x:W/2, y:H/2, size:110, color:'#ffffff', sc:'#000000', sw:12, font:'Cairo', al:'center', sh:true}, o);
+const mk = o => Object.assign({id:uid++, k:'t', hide:false, lock:false, t:'نص جديد', x:W/2, y:H/2, size:110, color:'#ffffff', sc:'#000000', sw:12, font:'Cairo', al:'center', sh:true}, o);
 
 const TPL = [
   {c1:'#0b3d91', c2:'#00b4d8', ov:45, od:'b', L:[
@@ -196,7 +253,7 @@ function tpl(i){
   Object.assign(S, {c1:T.c1, c2:T.c2, ov:T.ov, od:T.od});
   const u = Math.min(W / 1280, H / 720);
   layers = T.L.map(l => mk(Object.assign({}, l, {y: l.y * H / 720, size: Math.round(l.size * u), sw: Math.round((l.sw || 0) * u)}))); sel = 0;
-  syncUI(); draw();
+  syncUI(); draw(); commit();
 }
 
 function fit(img, z){
@@ -232,6 +289,8 @@ function draw(showSel = true){
   }
 
   layers.forEach((l, i) => {
+    if (l.hide){ l.box = null; return; }
+    if (l.k === 'i'){ drawImgLayer(l, i, showSel); return; }
     const lines = l.t.split('\n'), lh = l.size * 1.3;
     cx.font = `900 ${l.size}px "${l.font}", Cairo, sans-serif`;
     cx.direction = 'rtl'; cx.textAlign = l.al; cx.textBaseline = 'middle';
@@ -253,6 +312,9 @@ function draw(showSel = true){
       cx.setLineDash([]);
     }
   });
+  if (S.gw){ cx.globalCompositeOperation = 'soft-light'; cx.globalAlpha = Math.abs(S.gw) / 100 * .6; cx.fillStyle = S.gw > 0 ? '#ff9a2e' : '#2e8bff'; cx.fillRect(0, 0, W, H); cx.globalAlpha = 1; cx.globalCompositeOperation = 'source-over'; }
+  if (S.gv){ const v = cx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .35, W / 2, H / 2, Math.max(W, H) * .75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,' + S.gv / 100 * .7 + ')'); cx.fillStyle = v; cx.fillRect(0, 0, W, H); }
+  if (showSel && !inPv) schedPv();
   cx.restore();
 }
 
@@ -261,26 +323,9 @@ function cur(){ return layers[sel]; }
 
 function syncUI(){
   ['c1','c2','br','sa','ov','od','zoom','lgs'].forEach(k => $(k).value = S[k]);
+  $('gw').value = S.gw || 0; $('gv').value = S.gv || 0;
   renderLayers(); syncLayer();
 }
-function syncLayer(){
-  const l = cur(); if (!l) return;
-  $('t').value = l.t; $('fo').value = l.font; $('al').value = l.al;
-  $('sz').value = l.size; $('co').value = l.color; $('sc').value = l.sc;
-  $('sw').value = l.sw; $('sh').checked = l.sh;
-}
-function renderLayers(){
-  $('layers').innerHTML = '';
-  layers.forEach((l, i) => {
-    const b = document.createElement('button');
-    b.textContent = 'نص ' + (i + 1);
-    if (i === sel) b.className = 'on';
-    b.onclick = () => { sel = i; renderLayers(); syncLayer(); draw(); };
-    $('layers').appendChild(b);
-  });
-}
-function addL(){ layers.push(mk({y: H / 2 + layers.length * 40})); sel = layers.length - 1; renderLayers(); syncLayer(); draw(); }
-function delL(){ if (!layers.length) return; layers.splice(sel, 1); sel = Math.max(0, sel - 1); renderLayers(); syncLayer(); draw(); }
 
 ['c1','c2','br','sa','ov','od','zoom','lgs'].forEach(k =>
   $(k).addEventListener('input', e => { S[k] = (e.target.type === 'range') ? +e.target.value : e.target.value; draw(); }));
@@ -289,6 +334,7 @@ function delL(){ if (!layers.length) return; layers.splice(sel, 1); sel = Math.m
   $(id).addEventListener('input', e => {
     const l = cur(); if (!l) return;
     l[k] = e.target.type === 'range' ? +e.target.value : e.target.value;
+    if (id === 't') renderLayers();
     if (id === 'fo') document.fonts.load(`900 40px "${l.font}"`).then(() => draw());
     draw();
   }));
@@ -299,8 +345,8 @@ function loadImg(file, cb){
   r.onload = () => { const im = new Image(); im.onload = () => cb(im); im.src = r.result; };
   r.readAsDataURL(file);
 }
-$('bgf').onchange = e => e.target.files[0] && loadImg(e.target.files[0], im => { bgImg = im; draw(); });
-$('lgf').onchange = e => e.target.files[0] && loadImg(e.target.files[0], im => { logoImg = im; draw(); });
+$('bgf').onchange = e => e.target.files[0] && loadImg(e.target.files[0], im => { bgImg = im; S.bg = reg(im); draw(); });
+$('lgf').onchange = e => e.target.files[0] && loadImg(e.target.files[0], im => { logoImg = im; S.logo = reg(im); draw(); });
 
 /* ---------- سحب النصوص ---------- */
 let drag = null;
@@ -308,8 +354,7 @@ function pt(e){ const r = cv.getBoundingClientRect(); return {x: (e.clientX - r.
 cv.addEventListener('pointerdown', e => {
   const p = pt(e);
   for (let i = layers.length - 1; i >= 0; i--){
-    const b = layers[i].box;
-    if (b && p.x >= b.x - 20 && p.x <= b.x + b.w + 20 && p.y >= b.y && p.y <= b.y + b.h){
+    if (!layers[i].lock && hit(layers[i], p)){
       sel = i; drag = {dx: layers[i].x - p.x, dy: layers[i].y - p.y};
       cv.setPointerCapture(e.pointerId); renderLayers(); syncLayer(); draw(); return;
     }
@@ -335,11 +380,6 @@ function toBlob(){
     draw(true); res(b);
   });
 }
-$('dl').onclick = async () => {
-  const b = await toBlob(), a = document.createElement('a');
-  a.href = URL.createObjectURL(b); a.download = 'thumbnail.jpg'; a.click();
-  toast('تم تحميل الصورة');
-};
 
 /* ---------- يوتيوب ---------- */
 function toast(t, err){
@@ -463,7 +503,7 @@ function applyFmt(k){
   const [nw, nh] = FM[k]; fkey = k;
   if (nw !== W || nh !== H){
     const kx = nw / W, ky = nh / H, u = Math.min(kx, ky);
-    layers.forEach(l => { l.x *= kx; l.y *= ky; l.size = Math.max(24, Math.round(l.size * u)); l.sw = Math.round(l.sw * u); });
+    layers.forEach(l => { l.x *= kx; l.y *= ky; if (l.k === 'i'){ l.s *= u; l.s0 *= u; } else { l.size = Math.max(24, Math.round(l.size * u)); l.sw = Math.round(l.sw * u); } });
     S.bx *= kx; S.by *= ky;
     W = nw; H = nh;
     cv.width = W; cv.height = H; $('rp').width = W; $('rp').height = H;
@@ -492,8 +532,311 @@ async function fetchDurs(ids){
   } catch (e){}
 }
 
+/* ---------- الطبقات والصور المتعددة + التراجع + الحفظ التلقائي ---------- */
+const IM = {}, IMD = {};
+let nid = 1, hist = [], hi = -1, svT = null, dtT = null, warned = false;
+function reg(im){ const id = 'i' + (nid++); IM[id] = im; return id; }
+function shrink(im, max){
+  const k = Math.min(1, max / Math.max(im.width, im.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+  c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+  return c;
+}
+function toData(id){ if (!IMD[id]) IMD[id] = shrink(IM[id], 900).toDataURL('image/webp', .75); return IMD[id]; }
+
+function drawImgLayer(l, i, showSel){
+  const im = IM[l.iid]; if (!im){ l.box = null; return; }
+  const w = im.width * l.s, h = im.height * l.s;
+  cx.save();
+  cx.globalAlpha = l.op; cx.translate(l.x, l.y); cx.rotate(l.rot * Math.PI / 180); cx.scale(l.fl ? -1 : 1, 1);
+  cx.filter = fx(l);
+  cx.drawImage(im, -w / 2, -h / 2, w, h);
+  cx.filter = 'none';
+  cx.restore();
+  if (showSel && i === sel){
+    cx.save(); cx.translate(l.x, l.y); cx.rotate(l.rot * Math.PI / 180);
+    cx.setLineDash([10, 8]); cx.lineWidth = 3; cx.strokeStyle = '#ffb703'; cx.strokeRect(-w / 2, -h / 2, w, h);
+    cx.restore();
+  }
+}
+function hit(l, p){
+  if (l.hide) return false;
+  if (l.k === 'i'){
+    const im = IM[l.iid]; if (!im) return false;
+    const a = -l.rot * Math.PI / 180, dx = p.x - l.x, dy = p.y - l.y;
+    const rx = dx * Math.cos(a) - dy * Math.sin(a), ry = dx * Math.sin(a) + dy * Math.cos(a);
+    return Math.abs(rx) <= im.width * l.s / 2 && Math.abs(ry) <= im.height * l.s / 2;
+  }
+  const b = l.box; return !!b && p.x >= b.x - 20 && p.x <= b.x + b.w + 20 && p.y >= b.y && p.y <= b.y + b.h;
+}
+
+function lname(l){ return l.k === 'i' ? '🖼 ' + l.name : 'T ' + l.t.replace(/\n/g, ' ').slice(0, 16); }
+function renderLayers(){
+  const box = $('layers'); box.innerHTML = '';
+  for (let i = layers.length - 1; i >= 0; i--){
+    const l = layers[i], r = document.createElement('div');
+    r.className = 'lr' + (i === sel ? ' on' : '');
+    const n = document.createElement('span'); n.textContent = lname(l);
+    n.onclick = () => { sel = i; renderLayers(); syncLayer(); draw(); };
+    r.appendChild(n);
+    [['⬆', () => mv(i, 1)], ['⬇', () => mv(i, -1)], [l.hide ? '🚫' : '👁', () => { l.hide = !l.hide; ch(); }], [l.lock ? '🔒' : '🔓', () => { l.lock = !l.lock; ch(); }]]
+      .forEach(([t, f]) => { const b = document.createElement('button'); b.textContent = t; b.onclick = f; r.appendChild(b); });
+    box.appendChild(r);
+  }
+}
+function ch(){ renderLayers(); draw(); commit(); }
+function mv(i, d){
+  const j = i + d; if (j < 0 || j >= layers.length) return;
+  [layers[i], layers[j]] = [layers[j], layers[i]];
+  if (sel === i) sel = j; else if (sel === j) sel = i;
+  ch();
+}
+function syncLayer(){
+  const l = cur(), isI = l && l.k === 'i';
+  $('ictl').style.display = isI ? 'block' : 'none';
+  $('tctl').style.display = (l && !isI) ? 'block' : 'none';
+  if (!l) return;
+  if (isI){ $('is').value = Math.round(l.s / l.s0 * 100); $('ir').value = l.rot; $('io').value = Math.round(l.op * 100); EF.forEach(([id, k, d]) => $(id).value = l[k] ?? d); return; }
+  $('t').value = l.t; $('fo').value = l.font; $('al').value = l.al;
+  $('sz').value = l.size; $('co').value = l.color; $('sc').value = l.sc;
+  $('sw').value = l.sw; $('sh').checked = l.sh;
+}
+function addL(){ layers.push(mk({y: H / 2 + layers.length * 40})); sel = layers.length - 1; renderLayers(); syncLayer(); draw(); commit(); }
+function delL(){ if (!layers.length) return; layers.splice(sel, 1); sel = Math.max(0, sel - 1); renderLayers(); syncLayer(); draw(); commit(); }
+function flipL(){ const l = cur(); if (l && l.k === 'i'){ l.fl = !l.fl; draw(); commit(); } }
+
+[['is', l => { l.s = l.s0 * $('is').value / 100; }], ['ir', l => { l.rot = +$('ir').value; }], ['io', l => { l.op = $('io').value / 100; }]]
+  .forEach(([id, f]) => $(id).addEventListener('input', () => { const l = cur(); if (l && l.k === 'i'){ f(l); draw(); } }));
+
+$('af').onchange = e => {
+  [...e.target.files].forEach(f => loadImg(f, im => {
+    const c = shrink(im, 1600), id = reg(c);
+    const l = {id: uid++, k: 'i', iid: id, name: f.name.slice(0, 14), x: W / 2, y: H / 2, s: 1, s0: 1, rot: 0, fl: false, op: 1, hide: false, lock: false};
+    l.s = l.s0 = Math.min(W / c.width, H * .8 / c.height);
+    layers.push(l); sel = layers.length - 1;
+    renderLayers(); syncLayer(); draw(); commit();
+  }));
+  e.target.value = '';
+};
+
+/* التراجع والإعادة */
+function snap(){
+  return JSON.stringify({S, W, H, fkey, layers: layers.map(l => { const o = Object.assign({}, l); delete o.box; return o; })});
+}
+function sizeCanvas(){
+  cv.style.aspectRatio = W + ' / ' + H;
+  cv.style.width = H > W ? 'min(100%, ' + (70 * W / H) + 'vh)' : '100%';
+  cv.style.margin = '0 auto';
+}
+function restore(str){
+  const d = JSON.parse(str);
+  S = d.S; W = d.W; H = d.H; fkey = d.fkey; layers = d.layers;
+  uid = Math.max(uid, 1 + Math.max(0, ...layers.map(l => l.id || 0)));
+  sel = Math.max(0, Math.min(sel, layers.length - 1));
+  bgImg = S.bg ? IM[S.bg] || null : null; logoImg = S.logo ? IM[S.logo] || null : null;
+  cv.width = W; cv.height = H; $('rp').width = W; $('rp').height = H; sizeCanvas();
+  syncUI(); draw();
+  if (readyImg) paintReady($('rp'), W, H);
+}
+function updUR(){ $('undo').disabled = hi <= 0; $('redo').disabled = hi >= hist.length - 1; }
+function commit(force){
+  const s = snap();
+  if (!force && hist[hi] === s) return;
+  hist = hist.slice(0, hi + 1); hist.push(s);
+  if (hist.length > 60) hist.shift();
+  hi = hist.length - 1; updUR();
+  clearTimeout(svT); svT = setTimeout(save, 800);
+}
+function undo(){ if (hi > 0){ hi--; restore(hist[hi]); updUR(); clearTimeout(svT); svT = setTimeout(save, 800); } }
+function redo(){ if (hi < hist.length - 1){ hi++; restore(hist[hi]); updUR(); clearTimeout(svT); svT = setTimeout(save, 800); } }
+document.addEventListener('change', () => commit());
+document.addEventListener('input', () => { clearTimeout(dtT); dtT = setTimeout(() => commit(), 700); });
+cv.addEventListener('pointerup', () => commit());
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){
+    e.preventDefault(); e.shiftKey ? redo() : undo();
+  }
+});
+
+/* الحفظ التلقائي */
+function save(){
+  try {
+    const ids = new Set([S.bg, S.logo].filter(Boolean));
+    layers.forEach(l => l.iid && ids.add(l.iid));
+    const imgs = {}; ids.forEach(id => { if (IM[id]) imgs[id] = toData(id); });
+    localStorage.setItem('ts_auto', JSON.stringify({snap: snap(), imgs}));
+  } catch (e){
+    if (!warned){ warned = true; toast('تعذّر الحفظ التلقائي، مساحة المتصفح ممتلئة', true); }
+  }
+}
+async function loadSaved(sv){
+  const ids = Object.keys(sv.imgs || {});
+  await Promise.all(ids.map(id => new Promise(res => {
+    const im = new Image(); im.onload = () => { IM[id] = im; IMD[id] = sv.imgs[id]; res(); }; im.onerror = res; im.src = sv.imgs[id];
+  })));
+  ids.forEach(id => { const n = +id.slice(1); if (n >= nid) nid = n + 1; });
+  restore(sv.snap); hist = [sv.snap]; hi = 0; updUR();
+  toast('تم استعادة آخر جلسة');
+}
+function initState(){
+  let sv = null;
+  try { sv = JSON.parse(localStorage.getItem('ts_auto')); } catch (e){}
+  if (sv && sv.snap) loadSaved(sv); else { tpl(0); autoFmt(); }
+}
+function newProj(){
+  if (!confirm('بدء مشروع جديد؟ سيتم مسح التصميم الحالي.')) return;
+  try { localStorage.removeItem('ts_auto'); } catch (e){}
+  bgImg = null; logoImg = null;
+  S = {c1: '#0b3d91', c2: '#00b4d8', br: 100, sa: 110, ov: 45, od: 'b', zoom: 100, bx: 0, by: 0, lgs: 140};
+  tpl(0);
+}
+
+/* ---------- الدفعة 2: مؤثرات، معاينة، هوية، فحص، تصدير، ZIP ---------- */
+let pvOpen = false, inPv = false, pvQ = false;
+const EF = [['eb','br',100],['ec','ct',100],['es','sa',100],['eg','gl',0],['eo','ol',0],['ed','sd',0],['egc','gc','#00e5ff'],['eoc','oc','#ffffff']];
+function fx(l){
+  let f = `brightness(${l.br ?? 100}%) contrast(${l.ct ?? 100}%) saturate(${l.sa ?? 100}%)`;
+  const o = l.ol || 0, g = l.gl || 0, d = l.sd || 0;
+  if (o > 0) [[o, 0], [-o, 0], [0, o], [0, -o]].forEach(([x, y]) => f += ` drop-shadow(${x}px ${y}px 0 ${l.oc || '#fff'})`);
+  if (g > 0) f += ` drop-shadow(0 0 ${g}px ${l.gc || '#00e5ff'}) drop-shadow(0 0 ${g / 2}px ${l.gc || '#00e5ff'})`;
+  if (d > 0) f += ` drop-shadow(0 ${Math.round(d / 3)}px ${d}px rgba(0,0,0,.6))`;
+  return f;
+}
+EF.forEach(([id, k]) => $(id).addEventListener('input', e => {
+  const l = cur(); if (l && l.k === 'i'){ l[k] = e.target.type === 'range' ? +e.target.value : e.target.value; draw(); }
+}));
+function resetFx(){ const l = cur(); if (!l || l.k !== 'i') return; EF.forEach(([, k, d]) => l[k] = d); syncLayer(); draw(); commit(); }
+['gw', 'gv'].forEach(k => $(k).addEventListener('input', e => { S[k] = +e.target.value; draw(); }));
+
+/* معاينة يوتيوب */
+function togglePv(){ pvOpen = !pvOpen; $('pvbox').style.display = pvOpen ? 'block' : 'none'; if (pvOpen) refreshPv(); }
+function schedPv(){ if (!pvOpen || pvQ) return; pvQ = true; requestAnimationFrame(() => { pvQ = false; refreshPv(); }); }
+$('pvd').onchange = () => $('pvwrap').classList.toggle('dk', $('pvd').checked);
+function refreshPv(){
+  if (inPv) return; inPv = true; draw(false);
+  const ws = W >= H ? [320, 168, 120] : [150, 100, 70];
+  const t = layers.find(l => l.k === 't' && !l.hide);
+  const title = (video && video.title) || (t ? t.t.replace(/\n/g, ' ') : 'عنوان الفيديو يظهر هنا');
+  ['1', '2', '3'].forEach((n, i) => {
+    const c = $('p' + n); c.width = ws[i] * 2; c.height = Math.round(ws[i] * 2 * H / W);
+    const x = c.getContext('2d'); x.drawImage(cv, 0, 0, c.width, c.height);
+    const bw = c.width * .17, bh = c.height * .12, bx = c.width - bw - c.width * .02, by = c.height - bh - c.height * .03;
+    x.fillStyle = 'rgba(0,0,0,.82)'; x.fillRect(bx, by, bw, bh);
+    x.fillStyle = '#fff'; x.font = `700 ${bh * .7}px Cairo, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('12:34', bx + bw / 2, by + bh / 2 + 1);
+    c.parentNode.style.width = ws[i] + 'px'; $('pt' + n).textContent = title;
+  });
+  draw(true); inPv = false;
+}
+
+/* هوية القناة */
+function brandSave(){
+  const t = layers.find(l => l.k === 't' && !l.hide) || {};
+  const b = {c1: S.c1, c2: S.c2, lgs: S.lgs, font: t.font, color: t.color, sc: t.sc};
+  if (S.logo && IM[S.logo]) b.logo = toData(S.logo);
+  try { localStorage.setItem('ts_brand', JSON.stringify(b)); toast('تم حفظ هوية القناة'); } catch (e){ toast('تعذّر حفظ الهوية', true); }
+}
+function brandApply(){
+  let b = null; try { b = JSON.parse(localStorage.getItem('ts_brand')); } catch (e){}
+  if (!b) return toast('احفظ هوية القناة أولاً', true);
+  S.c1 = b.c1; S.c2 = b.c2; S.lgs = b.lgs || S.lgs;
+  layers.forEach(l => { if (l.k === 't'){ if (b.font) l.font = b.font; if (b.color) l.color = b.color; if (b.sc) l.sc = b.sc; } });
+  const fin = () => { syncUI(); draw(); commit(); toast('تم تطبيق الهوية'); };
+  if (b.font) document.fonts.load(`900 40px "${b.font}"`).then(() => draw());
+  if (b.logo){ const im = new Image(); im.onload = () => { logoImg = im; S.logo = reg(im); fin(); }; im.src = b.logo; } else fin();
+}
+
+/* فحص الجودة */
+function analyze(){
+  const vis = layers.filter(l => l.k === 't' && !l.hide), R = [];
+  if (!vis.length) return toast('أضف نصاً لفحصه', true);
+  draw(false); const boxes = vis.map(l => l.box);
+  vis.forEach(l => l.hide = true); draw(false);
+  const lum = (r, g, b) => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(r) + .7152 * f(g) + .0722 * f(b); };
+  const L = h => lum(...[1, 3, 5].map(i => parseInt(h.substr(i, 2), 16)));
+  const avg = (x, y, w, h) => {
+    x = Math.max(0, Math.round(x)); y = Math.max(0, Math.round(y)); w = Math.min(W - x, Math.round(w)); h = Math.min(H - y, Math.round(h));
+    if (w < 1 || h < 1) return .5;
+    const d = cx.getImageData(x, y, w, h).data; let s = 0, n = 0;
+    for (let i = 0; i < d.length; i += 16){ s += lum(d[i], d[i + 1], d[i + 2]); n++; }
+    return s / n;
+  };
+  const all = avg(0, 0, W, H), bg = boxes.map(b => b ? avg(b.x, b.y, b.w, b.h) : .5);
+  vis.forEach(l => l.hide = false); draw(true);
+  const cr = (a, b) => (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+  vis.forEach((l, i) => {
+    const nm = '«' + l.t.replace(/\n/g, ' ').slice(0, 14) + '»', b = boxes[i];
+    let c = cr(L(l.color), bg[i]); if (l.sw >= 6) c = Math.max(c, cr(L(l.color), L(l.sc)));
+    R.push([c >= 3, `تباين ${nm}: ${c.toFixed(1)}:1` + (c >= 4.5 ? ' ممتاز' : c >= 3 ? ' مقبول، عتّم الخلفية أو زد الإطار لو أمكن' : ' ضعيف، زد الإطار أو عتّم الخلفية')]);
+    const px = l.size * 168 / W;
+    R.push([px >= 11, `حجم ${nm} في المعاينة الصغيرة: ${px.toFixed(0)}px` + (px >= 11 ? '' : ' صغير، كبّر النص')]);
+    if (b && (b.x < W * .03 || b.x + b.w > W * .97)) R.push([false, `${nm} قريب من حافة الصورة`]);
+    if (b && W >= H && b.x + b.w > W * .78 && b.y + b.h > H * .84) R.push([false, `${nm} قد يغطيه وقت الفيديو أسفل اليمين`]);
+  });
+  const words = vis.reduce((n, l) => n + l.t.trim().split(/\s+/).filter(Boolean).length, 0);
+  R.push([words <= 7, `عدد كلمات الصورة: ${words}` + (words <= 7 ? '' : ' كثير، الأفضل 3 إلى 6 كلمات')]);
+  R.push([all > .03 && all < .85, 'الإضاءة العامة' + (all <= .03 ? ' مظلمة جداً' : all >= .85 ? ' ساطعة جداً' : ' متوازنة')]);
+  const box = $('repl'); box.innerHTML = '';
+  R.forEach(([ok, t]) => { const d = document.createElement('div'); d.className = 'rl ' + (ok ? 'ok' : 'w'); d.textContent = (ok ? '✓ ' : '⚠ ') + t; box.appendChild(d); });
+  $('rep').style.display = 'block';
+}
+
+/* التصدير */
+async function exportBlob(f){
+  if (f === 'yt') return toBlob();
+  draw(false);
+  const b = await new Promise(r => cv.toBlob(r, f === 'png' ? 'image/png' : 'image/webp', .93));
+  draw(true); return b;
+}
+$('dl').onclick = async () => {
+  const f = $('xf').value, b = await exportBlob(f), a = document.createElement('a');
+  a.href = URL.createObjectURL(b); a.download = 'thumbnail.' + (f === 'png' ? 'png' : f === 'webp' ? 'webp' : 'jpg'); a.click();
+  toast('تم تحميل الصورة (' + (b.size / 1024 | 0) + ' KB)');
+};
+
+/* دفعة صور + ZIP */
+/* ZIPSTART */
+const CT = (() => { const t = []; for (let n = 0; n < 256; n++){ let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u){ let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CT[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function makeZip(files){
+  const enc = new TextEncoder(), parts = [], cen = []; let off = 0, cs = 0;
+  files.forEach(f => {
+    const n = enc.encode(f.name), crc = crc32(f.data), sz = f.data.length;
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(12, 0x21, true);
+    h.setUint32(14, crc, true); h.setUint32(18, sz, true); h.setUint32(22, sz, true); h.setUint16(26, n.length, true);
+    parts.push(h.buffer, n, f.data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(14, 0x21, true);
+    c.setUint32(16, crc, true); c.setUint32(20, sz, true); c.setUint32(24, sz, true); c.setUint16(28, n.length, true); c.setUint32(42, off, true);
+    cen.push(c.buffer, n); cs += 46 + n.length; off += 30 + n.length + sz;
+  });
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cs, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...cen, e.buffer], {type: 'application/zip'});
+}
+/* ZIPEND */
+async function batchRun(){
+  const lines = $('bt').value.split('\n').map(x => x.trim()).filter(Boolean).slice(0, 50);
+  if (!lines.length) return toast('اكتب عنواناً في كل سطر', true);
+  const l = layers[sel] && layers[sel].k === 't' ? layers[sel] : layers.find(x => x.k === 't');
+  if (!l) return toast('أضف طبقة نص أولاً', true);
+  const orig = l.t, files = []; $('bb').disabled = true; $('bb').textContent = 'جارٍ الإنشاء...';
+  try {
+    for (let i = 0; i < lines.length; i++){
+      l.t = lines[i].replace(/\|/g, '\n');
+      const b = await toBlob();
+      files.push({name: 'thumb-' + String(i + 1).padStart(2, '0') + '.jpg', data: new Uint8Array(await b.arrayBuffer())});
+    }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(makeZip(files)); a.download = 'thumbnails.zip'; a.click();
+    toast('تم إنشاء ' + files.length + ' صورة');
+  } catch (e){ toast('حدث خطأ أثناء الإنشاء', true); }
+  l.t = orig; renderLayers(); syncLayer(); draw();
+  $('bb').disabled = false; $('bb').textContent = 'إنشاء وتنزيل ZIP';
+}
+
 /* ---------- تشغيل ---------- */
-tpl(0); autoFmt();
+initState();
 document.fonts.ready.then(() => draw());
 </script>
 </body>

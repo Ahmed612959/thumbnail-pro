@@ -7,44 +7,57 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Tajawal:wght@500;800;900&family=Almarai:wght@700;800&family=Lemonada:wght@600;700&family=Reem+Kufi:wght@600;700&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
-:root{--ink:#0e1a24;--panel:#15252f;--line:#26404d;--teal:#17a2a0;--amber:#ffb703;--paper:#eef3f4;--mute:#8fa6b0}
+:root{color-scheme:light;--bg:#f4f6f5;--card:#ffffff;--line:#e2e7e5;--ink:#1d2b30;--mute:#6a7a80;--acc:#0f766e;--acc2:#0b5d57;--soft:#e8f3f1;--warn:#b4372f}
 *{box-sizing:border-box}
-body{margin:0;background:var(--ink);color:var(--paper);font-family:Cairo,sans-serif;min-height:100vh}
-header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--line);gap:12px;flex-wrap:wrap}
-h1{font-size:20px;margin:0;font-weight:900}
-h1 span{color:var(--amber)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Cairo,sans-serif;min-height:100vh;line-height:1.6}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--card);border-bottom:1px solid var(--line);gap:12px;flex-wrap:wrap}
+h1{font-size:19px;margin:0;font-weight:800;letter-spacing:0}
+h1 span{color:var(--acc)}
 button,select,input,textarea{font-family:inherit;font-size:14px}
-button{cursor:pointer;border:0;border-radius:8px;padding:8px 14px;background:var(--line);color:var(--paper);font-weight:700}
-button:hover{filter:brightness(1.2)}
-button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
-.pri{background:var(--teal);color:#fff}
-.amb{background:var(--amber);color:#1a1200}
-.danger{background:#7a2230}
-button:disabled{opacity:.4;cursor:not-allowed}
-main{display:grid;grid-template-columns:260px minmax(0,1fr) 300px;gap:14px;padding:14px;align-items:start}
-.box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
-.box h2{font-size:14px;margin:0 0 10px;color:var(--amber)}
-#vids{display:grid;gap:8px;max-height:70vh;overflow:auto}
-.v{display:grid;grid-template-columns:96px 1fr;gap:8px;align-items:center;padding:6px;border-radius:8px;border:2px solid transparent;cursor:pointer;background:#0f1d26;text-align:right}
-.v img{width:96px;aspect-ratio:16/9;object-fit:cover;border-radius:4px;background:#000}
-.v b{font-size:12px;font-weight:700;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.v.sel{border-color:var(--amber)}
-.stage{display:grid;gap:10px}
-canvas{width:100%;aspect-ratio:16/9;border-radius:10px;background:#000;touch-action:none;cursor:move;display:block}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.f{display:grid;gap:4px;margin-bottom:10px;font-size:12px;color:var(--mute)}
-.f input[type=text],.f textarea,.f select{width:100%;background:#0f1d26;border:1px solid var(--line);border-radius:8px;color:var(--paper);padding:7px}
-.f textarea{resize:vertical;min-height:54px}
-.f input[type=range]{width:100%;accent-color:var(--teal)}
-.f input[type=color]{width:100%;height:34px;border:0;background:none;padding:0}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.tpl{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+button{cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:8px 16px;background:var(--card);color:var(--ink);font-weight:700;transition:background .15s,border-color .15s}
+button:hover{background:var(--soft);border-color:#c5d8d4}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.pri:hover{background:var(--acc2);border-color:var(--acc2)}
+.sec{background:var(--card)}
+.danger{color:var(--warn)}
+.danger:hover{background:#fbeceb;border-color:#efc9c6}
+button:disabled{opacity:.45;cursor:not-allowed}
+main{display:grid;grid-template-columns:250px minmax(0,1fr) 310px;gap:18px;padding:18px 24px;align-items:start;max-width:1500px;margin:0 auto}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.box>h2{font-size:14px;margin:0 0 12px;font-weight:800}
+#vids{display:grid;gap:6px;max-height:72vh;overflow:auto}
+.v{display:grid;grid-template-columns:92px 1fr;gap:10px;align-items:center;padding:6px;border-radius:10px;border:1.5px solid transparent;cursor:pointer;text-align:right}
+.v:hover{background:var(--bg)}
+.v img{width:92px;aspect-ratio:16/9;object-fit:cover;border-radius:6px;background:#dfe5e3}
+.v b{font-size:12px;font-weight:600;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.v.sel{border-color:var(--acc);background:var(--soft)}
+.stage{display:grid;gap:12px}
+canvas{width:100%;aspect-ratio:16/9;border-radius:12px;background:#fff;touch-action:none;cursor:move;display:block;border:1px solid var(--line);box-shadow:0 2px 14px rgba(20,40,40,.07)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.f{display:grid;gap:5px;margin-bottom:12px;font-size:12px;color:var(--mute);font-weight:600}
+.f input[type=text],.f textarea,.f select{width:100%;background:#fff;border:1px solid var(--line);border-radius:9px;color:var(--ink);padding:8px}
+.f textarea{resize:vertical;min-height:58px}
+.f input[type=range]{width:100%;accent-color:var(--acc)}
+.f input[type=color]{width:100%;height:34px;border:1px solid var(--line);border-radius:9px;background:#fff;padding:2px}
+.f input[type=file]{font-size:12px;color:var(--mute)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tpl{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 #layers{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-#layers button.on{background:var(--amber);color:#1a1200}
-#msg{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--teal);color:#fff;padding:10px 18px;border-radius:10px;font-weight:700;display:none;z-index:9}
-#msg.err{background:#b3283d}
-.hint{font-size:12px;color:var(--mute);line-height:1.7}
-@media(max-width:1000px){main{grid-template-columns:1fr}#vids{max-height:260px}}
+#layers button{padding:5px 12px}
+#layers button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+#panel{position:sticky;top:14px;max-height:calc(100vh - 28px);overflow:auto}
+details{border-bottom:1px solid var(--line);padding:4px 0 10px;margin-bottom:8px}
+details:last-child{border-bottom:0;margin-bottom:0}
+summary{cursor:pointer;font-weight:800;font-size:14px;padding:8px 0;list-style:none;display:flex;justify-content:space-between;align-items:center}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";color:var(--acc);font-size:18px;line-height:1}
+details[open]>summary::after{content:"\2212"}
+#msg{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 20px;border-radius:12px;font-weight:600;display:none;z-index:9;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+#msg.err{background:var(--warn)}
+.hint{font-size:12px;color:var(--mute);line-height:1.8;margin:0}
+label.hint{display:flex;gap:6px;align-items:center}
+@media(max-width:1050px){main{grid-template-columns:1fr;padding:14px}#vids{max-height:240px}#panel{position:static;max-height:none}}
 </style>
 </head>
 <body>
@@ -59,29 +72,29 @@ canvas{width:100%;aspect-ratio:16/9;border-radius:10px;background:#000;touch-act
 <main>
   <section class="box">
     <h2>فيديوهات القناة</h2>
-    <div id="vids"><p class="hint">اربط قناتك أولاً لتظهر فيديوهاتك هنا.</p></div>
+    <div id="vids"><p class="hint">اضغط «ربط قناة يوتيوب» لتظهر فيديوهاتك هنا.</p></div>
     <button id="more" style="width:100%;margin-top:8px;display:none">تحميل المزيد</button>
   </section>
 
   <section class="stage">
     <canvas id="cv" width="1280" height="720"></canvas>
     <div class="row">
-      <button class="amb" id="up" disabled>رفع على اليوتيوب</button>
-      <button class="pri" id="dl">تحميل الصورة</button>
+      <button class="pri" id="up" disabled>رفع على اليوتيوب</button>
+      <button class="sec" id="dl">تحميل الصورة</button>
       <span id="vt" class="hint">لم يتم اختيار فيديو بعد</span>
     </div>
     <p class="hint">اسحب أي نص على الصورة لتحريكه. الأبعاد 1280×720 والحجم يُضغط تلقائياً تحت 2MB كما يشترط يوتيوب.</p>
   </section>
 
-  <section class="box">
-    <h2>القوالب</h2>
-    <div class="tpl" style="margin-bottom:12px">
+  <section class="box" id="panel">
+    <details open><summary>القوالب</summary>
+    <div class="tpl" style="margin:4px 0 4px">
       <button onclick="tpl(0)">طبي</button>
       <button onclick="tpl(1)">درامي</button>
       <button onclick="tpl(2)">نظيف</button>
     </div>
 
-    <h2>الخلفية</h2>
+    </details><details><summary>الخلفية والشعار</summary>
     <div class="f"><input type="file" id="bgf" accept="image/*"></div>
     <div class="two">
       <div class="f">لون 1<input type="color" id="c1"></div>
@@ -99,7 +112,7 @@ canvas{width:100%;aspect-ratio:16/9;border-radius:10px;background:#000;touch-act
     <div class="f">شعار القناة<input type="file" id="lgf" accept="image/*"></div>
     <div class="f">حجم الشعار<input type="range" id="lgs" min="60" max="300" value="140"></div>
 
-    <h2>النصوص</h2>
+    </details><details open><summary>النصوص</summary>
     <div id="layers"></div>
     <div class="row" style="margin-bottom:10px">
       <button onclick="addL()">+ نص</button>
@@ -117,13 +130,14 @@ canvas{width:100%;aspect-ratio:16/9;border-radius:10px;background:#000;touch-act
     </div>
     <div class="f">سمك الإطار<input type="range" id="sw" min="0" max="30"></div>
     <label class="hint"><input type="checkbox" id="sh"> ظل خلف النص</label>
+    </details>
   </section>
 </main>
 <div id="msg"></div>
 
 <script>
 /* ====== إعدادات: ضع Client ID الخاص بك هنا ====== */
-const CLIENT_ID = 'PUT_YOUR_CLIENT_ID.apps.googleusercontent.com';
+const CLIENT_ID = '385027861937-g52ahurktbb5a03p4kij5m3dfqcet5fg.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload';
 /* ================================================= */
 

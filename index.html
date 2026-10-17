@@ -77,13 +77,39 @@ label.hint{display:flex;gap:6px;align-items:center}
   </section>
 
   <section class="stage">
+    <div class="row">
+      <div class="f" style="margin:0;min-width:210px">مقاس الصورة
+        <select id="fmt">
+          <option value="auto">تلقائي (حسب الفيديو المختار)</option>
+          <option value="h">أفقي 16:9 (1280×720) فيديو عادي</option>
+          <option value="v">عمودي 9:16 (720×1280) Shorts</option>
+          <option value="s">مربع 1:1 (1080×1080)</option>
+        </select>
+      </div>
+      <span id="fnote" class="hint"></span>
+    </div>
     <canvas id="cv" width="1280" height="720"></canvas>
     <div class="row">
       <button class="pri" id="up" disabled>رفع على اليوتيوب</button>
       <button class="sec" id="dl">تحميل الصورة</button>
       <span id="vt" class="hint">لم يتم اختيار فيديو بعد</span>
     </div>
-    <p class="hint">اسحب أي نص على الصورة لتحريكه. الأبعاد 1280×720 والحجم يُضغط تلقائياً تحت 2MB كما يشترط يوتيوب.</p>
+    <p class="hint">اسحب أي نص على الصورة لتحريكه. المقاس يتغير حسب الفيديو أو اختيارك، والحجم يُضغط تلقائياً تحت 2MB كما يشترط يوتيوب.</p>
+    <div class="box" id="rbox">
+      <h2>أو ارفع صورة جاهزة من هاتفك</h2>
+      <div class="f"><input type="file" id="rf" accept="image/jpeg,image/png,image/webp"></div>
+      <div class="row">
+        <div class="f" style="margin:0;min-width:170px">ملاءمة الصورة
+          <select id="rm"><option value="cover">ملء الإطار (مع قص الزيادة)</option><option value="contain">كاملة (مع حواف سوداء)</option></select>
+        </div>
+        <canvas id="rp" width="1280" height="720" style="height:180px;width:auto;display:none;cursor:default;box-shadow:none"></canvas>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="pri" id="ru" disabled>رفع الصورة على الفيديو المختار</button>
+        <span id="rv" class="hint">لم يتم اختيار فيديو</span>
+      </div>
+      <p class="hint" style="margin-top:8px">تُحوَّل الصورة تلقائياً لمقاس الفيديو المختار وتُضغط تحت 2MB. مقبول: JPG وPNG وWebP.</p>
+    </div>
   </section>
 
   <section class="box" id="panel">
@@ -141,7 +167,10 @@ const CLIENT_ID = '385027861937-g52ahurktbb5a03p4kij5m3dfqcet5fg.apps.googleuser
 const SCOPES = 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload';
 /* ================================================= */
 
-const W = 1280, H = 720;
+let W = 1280, H = 720;
+const FM = {h:[1280,720], v:[720,1280], s:[1080,1080]};
+const FN = {h:'أفقي 16:9', v:'عمودي 9:16', s:'مربع 1:1'};
+let durs = {}, fkey = 'h';
 const cv = document.getElementById('cv'), cx = cv.getContext('2d');
 const $ = id => document.getElementById(id);
 
@@ -165,7 +194,8 @@ const TPL = [
 function tpl(i){
   const T = TPL[i];
   Object.assign(S, {c1:T.c1, c2:T.c2, ov:T.ov, od:T.od});
-  layers = T.L.map(l => mk(l)); sel = 0;
+  const u = Math.min(W / 1280, H / 720);
+  layers = T.L.map(l => mk(Object.assign({}, l, {y: l.y * H / 720, size: Math.round(l.size * u), sw: Math.round((l.sw || 0) * u)}))); sel = 0;
   syncUI(); draw();
 }
 
@@ -364,10 +394,11 @@ async function loadVideos(){
       d.onclick = () => {
         document.querySelectorAll('.v.sel').forEach(x => x.classList.remove('sel'));
         d.classList.add('sel'); video = {id, title: s.title};
-        $('vt').textContent = 'الفيديو المختار: ' + s.title; $('up').disabled = false;
+        $('vt').textContent = 'الفيديو المختار: ' + s.title; $('up').disabled = false; refreshReadyBtn(); autoFmt();
       };
       $('vids').appendChild(d);
     });
+    await fetchDurs(j.items.map(it => it.snippet.resourceId.videoId));
     nextPage = j.nextPageToken || null;
     $('more').style.display = nextPage ? 'block' : 'none';
   } catch (e){ toast(e.message, true); }
@@ -390,8 +421,79 @@ $('up').onclick = async () => {
   $('up').textContent = 'رفع على اليوتيوب'; $('up').disabled = false;
 };
 
+/* ---------- رفع صورة جاهزة من الهاتف ---------- */
+let readyImg = null;
+function paintReady(c, w, h){
+  const x = c.getContext('2d');
+  x.fillStyle = '#000'; x.fillRect(0, 0, w, h);
+  const k = $('rm').value === 'cover' ? Math.max(w / readyImg.width, h / readyImg.height) : Math.min(w / readyImg.width, h / readyImg.height);
+  const iw = readyImg.width * k, ih = readyImg.height * k;
+  x.drawImage(readyImg, (w - iw) / 2, (h - ih) / 2, iw, ih);
+}
+function refreshReadyBtn(){
+  $('rv').textContent = video ? 'الفيديو المختار: ' + video.title : 'اختر فيديو من القائمة أولاً';
+  $('ru').disabled = !(video && token && readyImg);
+}
+$('rf').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (!/^image\/(jpeg|png|webp)$/.test(f.type)) return toast('الملف لازم يكون JPG أو PNG أو WebP', true);
+  loadImg(f, im => { readyImg = im; $('rp').style.display = 'block'; paintReady($('rp'), W, H); refreshReadyBtn(); });
+};
+$('rm').onchange = () => { if (readyImg) paintReady($('rp'), W, H); };
+$('ru').onclick = async () => {
+  if (!video || !token || !readyImg) return;
+  if (!confirm('سيتم استبدال الصورة المصغرة للفيديو:\n' + video.title + '\nهل تريد المتابعة؟')) return;
+  $('ru').disabled = true; $('ru').textContent = 'جارٍ الرفع...';
+  try {
+    const c = document.createElement('canvas'); c.width = W; c.height = H; paintReady(c, W, H);
+    let q = .95, b;
+    do { b = await new Promise(r => c.toBlob(r, 'image/jpeg', q)); q -= .07; } while (b.size > 2 * 1024 * 1024 && q > .4);
+    await api(`https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${video.id}`, {method: 'POST', headers: {'Content-Type': 'image/jpeg'}, body: b});
+    const img = document.querySelector(`.v[data-id="${video.id}"] img`);
+    if (img) img.src = URL.createObjectURL(b);
+    toast('تم تحديث الصورة المصغرة على يوتيوب');
+  } catch (e){
+    toast(e.message.includes('permission') ? 'القناة تحتاج توثيق الهاتف لرفع صور مخصصة' : e.message, true);
+  }
+  $('ru').textContent = 'رفع الصورة على الفيديو المختار'; refreshReadyBtn();
+};
+
+/* ---------- مقاس الصورة حسب الفيديو ---------- */
+function applyFmt(k){
+  const [nw, nh] = FM[k]; fkey = k;
+  if (nw !== W || nh !== H){
+    const kx = nw / W, ky = nh / H, u = Math.min(kx, ky);
+    layers.forEach(l => { l.x *= kx; l.y *= ky; l.size = Math.max(24, Math.round(l.size * u)); l.sw = Math.round(l.sw * u); });
+    S.bx *= kx; S.by *= ky;
+    W = nw; H = nh;
+    cv.width = W; cv.height = H; $('rp').width = W; $('rp').height = H;
+  }
+  cv.style.aspectRatio = W + ' / ' + H;
+  cv.style.width = H > W ? 'min(100%, ' + (70 * W / H) + 'vh)' : '100%';
+  cv.style.margin = '0 auto';
+  syncLayer(); draw();
+  if (readyImg) paintReady($('rp'), W, H);
+}
+function guessFmt(){ return video && durs[video.id] && durs[video.id] <= 180 ? 'v' : 'h'; }
+function autoFmt(){
+  const v = $('fmt').value;
+  const k = v === 'auto' ? guessFmt() : v;
+  applyFmt(k);
+  $('fnote').textContent = (v === 'auto' && video ? 'تم اختيار ' : 'المقاس: ') + FN[k] + (v === 'auto' && video && k === 'v' ? ' (الفيديو أقل من 3 دقائق، غيّره يدوياً لو أفقي)' : '');
+}
+$('fmt').onchange = autoFmt;
+async function fetchDurs(ids){
+  try {
+    const r = await api('https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=' + ids.join(','));
+    r.items.forEach(v => {
+      const m = v.contentDetails.duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/) || [];
+      durs[v.id] = (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0);
+    });
+  } catch (e){}
+}
+
 /* ---------- تشغيل ---------- */
-tpl(0);
+tpl(0); autoFmt();
 document.fonts.ready.then(() => draw());
 </script>
 </body>

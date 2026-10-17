@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>استوديو الصور المصغرة</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Tajawal:wght@500;800;900&family=Almarai:wght@700;800&family=Lemonada:wght@600;700&family=Reem+Kufi:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{--ink:#0e1a24;--panel:#15252f;--line:#26404d;--teal:#17a2a0;--amber:#ffb703;--paper:#eef3f4;--mute:#8fa6b0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--paper);font-family:Cairo,sans-serif;min-height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--line);gap:12px;flex-wrap:wrap}
+h1{font-size:20px;margin:0;font-weight:900}
+h1 span{color:var(--amber)}
+button,select,input,textarea{font-family:inherit;font-size:14px}
+button{cursor:pointer;border:0;border-radius:8px;padding:8px 14px;background:var(--line);color:var(--paper);font-weight:700}
+button:hover{filter:brightness(1.2)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.pri{background:var(--teal);color:#fff}
+.amb{background:var(--amber);color:#1a1200}
+.danger{background:#7a2230}
+button:disabled{opacity:.4;cursor:not-allowed}
+main{display:grid;grid-template-columns:260px minmax(0,1fr) 300px;gap:14px;padding:14px;align-items:start}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.box h2{font-size:14px;margin:0 0 10px;color:var(--amber)}
+#vids{display:grid;gap:8px;max-height:70vh;overflow:auto}
+.v{display:grid;grid-template-columns:96px 1fr;gap:8px;align-items:center;padding:6px;border-radius:8px;border:2px solid transparent;cursor:pointer;background:#0f1d26;text-align:right}
+.v img{width:96px;aspect-ratio:16/9;object-fit:cover;border-radius:4px;background:#000}
+.v b{font-size:12px;font-weight:700;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.v.sel{border-color:var(--amber)}
+.stage{display:grid;gap:10px}
+canvas{width:100%;aspect-ratio:16/9;border-radius:10px;background:#000;touch-action:none;cursor:move;display:block}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.f{display:grid;gap:4px;margin-bottom:10px;font-size:12px;color:var(--mute)}
+.f input[type=text],.f textarea,.f select{width:100%;background:#0f1d26;border:1px solid var(--line);border-radius:8px;color:var(--paper);padding:7px}
+.f textarea{resize:vertical;min-height:54px}
+.f input[type=range]{width:100%;accent-color:var(--teal)}
+.f input[type=color]{width:100%;height:34px;border:0;background:none;padding:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tpl{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#layers{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+#layers button.on{background:var(--amber);color:#1a1200}
+#msg{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--teal);color:#fff;padding:10px 18px;border-radius:10px;font-weight:700;display:none;z-index:9}
+#msg.err{background:#b3283d}
+.hint{font-size:12px;color:var(--mute);line-height:1.7}
+@media(max-width:1000px){main{grid-template-columns:1fr}#vids{max-height:260px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>استوديو <span>الصور المصغرة</span></h1>
+  <div class="row">
+    <span id="ch" class="hint"></span>
+    <button class="pri" id="login">ربط قناة يوتيوب</button>
+  </div>
+</header>
+
+<main>
+  <section class="box">
+    <h2>فيديوهات القناة</h2>
+    <div id="vids"><p class="hint">اربط قناتك أولاً لتظهر فيديوهاتك هنا.</p></div>
+    <button id="more" style="width:100%;margin-top:8px;display:none">تحميل المزيد</button>
+  </section>
+
+  <section class="stage">
+    <canvas id="cv" width="1280" height="720"></canvas>
+    <div class="row">
+      <button class="amb" id="up" disabled>رفع على اليوتيوب</button>
+      <button class="pri" id="dl">تحميل الصورة</button>
+      <span id="vt" class="hint">لم يتم اختيار فيديو بعد</span>
+    </div>
+    <p class="hint">اسحب أي نص على الصورة لتحريكه. الأبعاد 1280×720 والحجم يُضغط تلقائياً تحت 2MB كما يشترط يوتيوب.</p>
+  </section>
+
+  <section class="box">
+    <h2>القوالب</h2>
+    <div class="tpl" style="margin-bottom:12px">
+      <button onclick="tpl(0)">طبي</button>
+      <button onclick="tpl(1)">درامي</button>
+      <button onclick="tpl(2)">نظيف</button>
+    </div>
+
+    <h2>الخلفية</h2>
+    <div class="f"><input type="file" id="bgf" accept="image/*"></div>
+    <div class="two">
+      <div class="f">لون 1<input type="color" id="c1"></div>
+      <div class="f">لون 2<input type="color" id="c2"></div>
+    </div>
+    <div class="f">تكبير الصورة<input type="range" id="zoom" min="100" max="250" value="100"></div>
+    <div class="two">
+      <div class="f">سطوع<input type="range" id="br" min="50" max="150" value="100"></div>
+      <div class="f">تشبّع<input type="range" id="sa" min="50" max="200" value="110"></div>
+    </div>
+    <div class="two">
+      <div class="f">تعتيم التدرج<input type="range" id="ov" min="0" max="90" value="45"></div>
+      <div class="f">اتجاهه<select id="od"><option value="b">من أسفل</option><option value="r">من اليمين</option><option value="l">من اليسار</option></select></div>
+    </div>
+    <div class="f">شعار القناة<input type="file" id="lgf" accept="image/*"></div>
+    <div class="f">حجم الشعار<input type="range" id="lgs" min="60" max="300" value="140"></div>
+
+    <h2>النصوص</h2>
+    <div id="layers"></div>
+    <div class="row" style="margin-bottom:10px">
+      <button onclick="addL()">+ نص</button>
+      <button class="danger" onclick="delL()">حذف</button>
+    </div>
+    <div class="f">النص<textarea id="t"></textarea></div>
+    <div class="two">
+      <div class="f">الخط<select id="fo"><option>Cairo</option><option>Tajawal</option><option>Almarai</option><option>Lemonada</option><option>Reem Kufi</option></select></div>
+      <div class="f">المحاذاة<select id="al"><option value="center">وسط</option><option value="right">يمين</option><option value="left">يسار</option></select></div>
+    </div>
+    <div class="f">الحجم<input type="range" id="sz" min="30" max="260"></div>
+    <div class="two">
+      <div class="f">لون النص<input type="color" id="co"></div>
+      <div class="f">لون الإطار<input type="color" id="sc"></div>
+    </div>
+    <div class="f">سمك الإطار<input type="range" id="sw" min="0" max="30"></div>
+    <label class="hint"><input type="checkbox" id="sh"> ظل خلف النص</label>
+  </section>
+</main>
+<div id="msg"></div>
+
+<script>
+/* ====== إعدادات: ضع Client ID الخاص بك هنا ====== */
+const CLIENT_ID = 'PUT_YOUR_CLIENT_ID.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload';
+/* ================================================= */
+
+const W = 1280, H = 720;
+const cv = document.getElementById('cv'), cx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+
+let S = {c1:'#0b3d91', c2:'#00b4d8', br:100, sa:110, ov:45, od:'b', zoom:100, bx:0, by:0, lgs:140};
+let bgImg = null, logoImg = null, layers = [], sel = 0, token = null, video = null, nextPage = null, uploadsId = null, uid = 1;
+
+const mk = o => Object.assign({id:uid++, t:'نص جديد', x:W/2, y:H/2, size:110, color:'#ffffff', sc:'#000000', sw:12, font:'Cairo', al:'center', sh:true}, o);
+
+const TPL = [
+  {c1:'#0b3d91', c2:'#00b4d8', ov:45, od:'b', L:[
+    {t:'أهم 5 أخطاء\nفي التمريض', y:300, size:130, color:'#ffffff', sc:'#06203f', sw:16},
+    {t:'لازم تعرفها!', y:560, size:100, color:'#ffd23f', sc:'#3a2a00', sw:14}]},
+  {c1:'#120a0e', c2:'#9b0f2e', ov:30, od:'l', L:[
+    {t:'محدش قالك\nالحقيقة دي', y:310, size:135, color:'#ffe066', sc:'#000000', sw:18, font:'Tajawal'},
+    {t:'شاهد قبل الامتحان', y:570, size:80, color:'#ffffff', sc:'#000000', sw:12, font:'Tajawal'}]},
+  {c1:'#ffffff', c2:'#d7ecf7', ov:0, od:'b', L:[
+    {t:'شرح مبسّط', y:300, size:150, color:'#0e3a5c', sc:'#ffffff', sw:0, sh:false, font:'Almarai'},
+    {t:'خطوة بخطوة', y:520, size:90, color:'#17a2a0', sc:'#ffffff', sw:0, sh:false, font:'Almarai'}]}
+];
+
+function tpl(i){
+  const T = TPL[i];
+  Object.assign(S, {c1:T.c1, c2:T.c2, ov:T.ov, od:T.od});
+  layers = T.L.map(l => mk(l)); sel = 0;
+  syncUI(); draw();
+}
+
+function fit(img, z){
+  const r = Math.max(W / img.width, H / img.height) * z / 100;
+  const w = img.width * r, h = img.height * r;
+  return [(W - w) / 2 + S.bx, (H - h) / 2 + S.by, w, h];
+}
+
+function draw(showSel = true){
+  cx.save();
+  cx.clearRect(0, 0, W, H);
+  const g = cx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, S.c1); g.addColorStop(1, S.c2);
+  cx.fillStyle = g; cx.fillRect(0, 0, W, H);
+
+  if (bgImg){
+    cx.filter = `brightness(${S.br}%) saturate(${S.sa}%)`;
+    const [x, y, w, h] = fit(bgImg, S.zoom);
+    cx.drawImage(bgImg, x, y, w, h);
+    cx.filter = 'none';
+  }
+  if (S.ov > 0){
+    const a = S.ov / 100;
+    let o = S.od === 'b' ? cx.createLinearGradient(0, H, 0, H * .15)
+          : S.od === 'r' ? cx.createLinearGradient(W, 0, W * .3, 0)
+          : cx.createLinearGradient(0, 0, W * .7, 0);
+    o.addColorStop(0, `rgba(0,0,0,${a})`); o.addColorStop(1, 'rgba(0,0,0,0)');
+    cx.fillStyle = o; cx.fillRect(0, 0, W, H);
+  }
+  if (logoImg){
+    const w = S.lgs, h = logoImg.height * w / logoImg.width;
+    cx.drawImage(logoImg, 36, 36, w, h);
+  }
+
+  layers.forEach((l, i) => {
+    const lines = l.t.split('\n'), lh = l.size * 1.3;
+    cx.font = `900 ${l.size}px "${l.font}", Cairo, sans-serif`;
+    cx.direction = 'rtl'; cx.textAlign = l.al; cx.textBaseline = 'middle';
+    cx.lineJoin = 'round';
+    let mw = 0;
+    lines.forEach((t, k) => {
+      const y = l.y - (lines.length - 1) * lh / 2 + k * lh;
+      mw = Math.max(mw, cx.measureText(t).width);
+      if (l.sh){ cx.shadowColor = 'rgba(0,0,0,.55)'; cx.shadowBlur = 18; cx.shadowOffsetY = 6; }
+      if (l.sw > 0){ cx.lineWidth = l.sw; cx.strokeStyle = l.sc; cx.strokeText(t, l.x, y); }
+      cx.shadowColor = 'transparent'; cx.shadowBlur = 0; cx.shadowOffsetY = 0;
+      cx.fillStyle = l.color; cx.fillText(t, l.x, y);
+    });
+    const x0 = l.al === 'center' ? l.x - mw / 2 : l.al === 'right' ? l.x - mw : l.x;
+    l.box = {x: x0, y: l.y - lines.length * lh / 2, w: mw, h: lines.length * lh};
+    if (showSel && i === sel){
+      cx.setLineDash([10, 8]); cx.lineWidth = 3; cx.strokeStyle = '#ffb703';
+      cx.strokeRect(l.box.x - 10, l.box.y, l.box.w + 20, l.box.h);
+      cx.setLineDash([]);
+    }
+  });
+  cx.restore();
+}
+
+/* ---------- واجهة التحكم ---------- */
+function cur(){ return layers[sel]; }
+
+function syncUI(){
+  ['c1','c2','br','sa','ov','od','zoom','lgs'].forEach(k => $(k).value = S[k]);
+  renderLayers(); syncLayer();
+}
+function syncLayer(){
+  const l = cur(); if (!l) return;
+  $('t').value = l.t; $('fo').value = l.font; $('al').value = l.al;
+  $('sz').value = l.size; $('co').value = l.color; $('sc').value = l.sc;
+  $('sw').value = l.sw; $('sh').checked = l.sh;
+}
+function renderLayers(){
+  $('layers').innerHTML = '';
+  layers.forEach((l, i) => {
+    const b = document.createElement('button');
+    b.textContent = 'نص ' + (i + 1);
+    if (i === sel) b.className = 'on';
+    b.onclick = () => { sel = i; renderLayers(); syncLayer(); draw(); };
+    $('layers').appendChild(b);
+  });
+}
+function addL(){ layers.push(mk({y: H / 2 + layers.length * 40})); sel = layers.length - 1; renderLayers(); syncLayer(); draw(); }
+function delL(){ if (!layers.length) return; layers.splice(sel, 1); sel = Math.max(0, sel - 1); renderLayers(); syncLayer(); draw(); }
+
+['c1','c2','br','sa','ov','od','zoom','lgs'].forEach(k =>
+  $(k).addEventListener('input', e => { S[k] = (e.target.type === 'range') ? +e.target.value : e.target.value; draw(); }));
+
+[['t','t'],['fo','font'],['al','al'],['sz','size'],['co','color'],['sc','sc'],['sw','sw']].forEach(([id, k]) =>
+  $(id).addEventListener('input', e => {
+    const l = cur(); if (!l) return;
+    l[k] = e.target.type === 'range' ? +e.target.value : e.target.value;
+    if (id === 'fo') document.fonts.load(`900 40px "${l.font}"`).then(() => draw());
+    draw();
+  }));
+$('sh').addEventListener('change', e => { if (cur()){ cur().sh = e.target.checked; draw(); } });
+
+function loadImg(file, cb){
+  const r = new FileReader();
+  r.onload = () => { const im = new Image(); im.onload = () => cb(im); im.src = r.result; };
+  r.readAsDataURL(file);
+}
+$('bgf').onchange = e => e.target.files[0] && loadImg(e.target.files[0], im => { bgImg = im; draw(); });
+$('lgf').onchange = e => e.target.files[0] && loadImg(e.target.files[0], im => { logoImg = im; draw(); });
+
+/* ---------- سحب النصوص ---------- */
+let drag = null;
+function pt(e){ const r = cv.getBoundingClientRect(); return {x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height}; }
+cv.addEventListener('pointerdown', e => {
+  const p = pt(e);
+  for (let i = layers.length - 1; i >= 0; i--){
+    const b = layers[i].box;
+    if (b && p.x >= b.x - 20 && p.x <= b.x + b.w + 20 && p.y >= b.y && p.y <= b.y + b.h){
+      sel = i; drag = {dx: layers[i].x - p.x, dy: layers[i].y - p.y};
+      cv.setPointerCapture(e.pointerId); renderLayers(); syncLayer(); draw(); return;
+    }
+  }
+  if (bgImg) drag = {bg: true, px: p.x, py: p.y, bx: S.bx, by: S.by};
+  cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const p = pt(e);
+  if (drag.bg){ S.bx = drag.bx + p.x - drag.px; S.by = drag.by + p.y - drag.py; }
+  else { cur().x = p.x + drag.dx; cur().y = p.y + drag.dy; }
+  draw();
+});
+cv.addEventListener('pointerup', () => drag = null);
+
+/* ---------- التصدير ---------- */
+function toBlob(){
+  draw(false);
+  return new Promise(async res => {
+    let q = .95, b;
+    do { b = await new Promise(r => cv.toBlob(r, 'image/jpeg', q)); q -= .07; } while (b.size > 2 * 1024 * 1024 && q > .4);
+    draw(true); res(b);
+  });
+}
+$('dl').onclick = async () => {
+  const b = await toBlob(), a = document.createElement('a');
+  a.href = URL.createObjectURL(b); a.download = 'thumbnail.jpg'; a.click();
+  toast('تم تحميل الصورة');
+};
+
+/* ---------- يوتيوب ---------- */
+function toast(t, err){
+  const m = $('msg'); m.textContent = t; m.className = err ? 'err' : ''; m.style.display = 'block';
+  clearTimeout(toast.t); toast.t = setTimeout(() => m.style.display = 'none', 3500);
+}
+async function api(url, opt = {}){
+  const r = await fetch(url, Object.assign({}, opt, {headers: Object.assign({Authorization: 'Bearer ' + token}, opt.headers || {})}));
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error((j.error && j.error.message) || 'خطأ في الاتصال');
+  return j;
+}
+
+let tc = null;
+$('login').onclick = () => {
+  if (CLIENT_ID.startsWith('PUT_YOUR')) return toast('ضع Client ID في أول السكربت أولاً', true);
+  if (!window.google) return toast('تعذّر تحميل خدمة جوجل، أعد المحاولة', true);
+  tc = tc || google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID, scope: SCOPES,
+    callback: async r => {
+      if (r.error) return toast('تم إلغاء الربط', true);
+      token = r.access_token; await loadChannel();
+    }
+  });
+  tc.requestAccessToken({prompt: token ? '' : 'consent'});
+};
+
+async function loadChannel(){
+  try {
+    const j = await api('https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails&mine=true');
+    const c = j.items && j.items[0];
+    if (!c) return toast('لا توجد قناة على هذا الحساب', true);
+    $('ch').textContent = c.snippet.title;
+    $('login').textContent = 'تحديث';
+    uploadsId = c.contentDetails.relatedPlaylists.uploads;
+    $('vids').innerHTML = ''; nextPage = null;
+    await loadVideos();
+  } catch (e){ toast(e.message, true); }
+}
+
+async function loadVideos(){
+  try {
+    const j = await api(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=30&playlistId=${uploadsId}` + (nextPage ? '&pageToken=' + nextPage : ''));
+    j.items.forEach(it => {
+      const s = it.snippet, id = s.resourceId.videoId;
+      const th = (s.thumbnails.medium || s.thumbnails.default || {}).url || '';
+      const d = document.createElement('div');
+      d.className = 'v'; d.dataset.id = id;
+      d.innerHTML = `<img alt=""><b></b>`;
+      d.querySelector('img').src = th;
+      d.querySelector('b').textContent = s.title;
+      d.onclick = () => {
+        document.querySelectorAll('.v.sel').forEach(x => x.classList.remove('sel'));
+        d.classList.add('sel'); video = {id, title: s.title};
+        $('vt').textContent = 'الفيديو المختار: ' + s.title; $('up').disabled = false;
+      };
+      $('vids').appendChild(d);
+    });
+    nextPage = j.nextPageToken || null;
+    $('more').style.display = nextPage ? 'block' : 'none';
+  } catch (e){ toast(e.message, true); }
+}
+$('more').onclick = loadVideos;
+
+$('up').onclick = async () => {
+  if (!video || !token) return;
+  if (!confirm('سيتم استبدال الصورة المصغرة للفيديو:\n' + video.title + '\nهل تريد المتابعة؟')) return;
+  $('up').disabled = true; $('up').textContent = 'جارٍ الرفع...';
+  try {
+    const b = await toBlob();
+    await api(`https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${video.id}`, {method: 'POST', headers: {'Content-Type': 'image/jpeg'}, body: b});
+    const img = document.querySelector(`.v[data-id="${video.id}"] img`);
+    if (img) img.src = URL.createObjectURL(b);
+    toast('تم تحديث الصورة المصغرة على يوتيوب');
+  } catch (e){
+    toast(e.message.includes('permission') ? 'القناة تحتاج توثيق الهاتف لرفع صور مخصصة' : e.message, true);
+  }
+  $('up').textContent = 'رفع على اليوتيوب'; $('up').disabled = false;
+};
+
+/* ---------- تشغيل ---------- */
+tpl(0);
+document.fonts.ready.then(() => draw());
+</script>
+</body>
+</html>
